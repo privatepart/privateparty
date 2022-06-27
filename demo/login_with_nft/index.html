@@ -1,0 +1,59 @@
+<html>
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
+<script src="https://unpkg.com/privatepartyjs@0.0.23/dist/privateparty.js"></script>
+<style>
+.hidden { display: none; }
+img { width: 50px; height: 50px; flex-shrink: 0; margin-right: 10px; border-radius: 50px; }
+nav { display: flex; align-items: center; }
+</style>
+</head>
+<body>
+<nav>
+  <img class='hidden'>
+  <div class='fields'>
+    <input type='text' placeholder="contract address" id='contract'>
+    <input type='text' placeholder="tokenId" id='id'>
+  </div>
+  <button></button>
+</nav>
+<pre class='session'></pre>
+<script>
+const web3 = new Web3(window.ethereum)
+const party = new Privateparty({ web3 })
+const render = async () => {
+  let session = await party.session("user")
+  document.querySelector("button").innerHTML = (session ? "logout" : "login")
+  document.querySelector(".session").innerHTML = JSON.stringify(session, null, 2)
+  if (session && session.auth && session.auth.image) {
+    // logged in
+    document.querySelector("img").src = session.auth.image 
+    document.querySelector("img").classList.remove("hidden")
+    document.querySelector(".fields").classList.add("hidden")
+  } else {
+    // logged out
+    document.querySelector("img").classList.add("hidden")
+    document.querySelector(".fields").classList.remove("hidden")
+  }
+}
+document.querySelector("button").addEventListener("click", async (e) => {
+  try {
+    let session = await party.session("user")
+    if (session) {
+      await party.disconnect("user")
+    } else {
+      let connection = await party.connect("user", {
+        collection: document.querySelector("#contract").value,
+        tokenId: document.querySelector("#id").value,
+      })
+      console.log("connection", connection)
+    }
+    await render()
+  } catch (e) {
+    document.querySelector(".session").innerHTML = e.message
+  }
+})
+render()
+</script>
+</body>
+</html>

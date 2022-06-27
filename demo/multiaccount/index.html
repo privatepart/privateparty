@@ -1,0 +1,42 @@
+<html>
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
+<script src="https://unpkg.com/privatepartyjs@0.0.23/dist/privateparty.js"></script>
+<style>
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<nav>
+  <h1>User page</h1>
+  <button></button>
+  <pre class='session'></pre>
+  <a href="/admin">go to admin dashboard</a>
+</nav>
+<script>
+const web3 = new Web3(window.ethereum)
+const party = new Privateparty({ web3 })
+const render = async () => {
+  let session = await party.session("user")
+  // if logged in (session.user exists), it's a logout button. if logged out, it's a login button.
+  document.querySelector("button").innerHTML = (session ? "logout" : "login")
+  // print the current session
+  document.querySelector(".session").innerHTML = JSON.stringify(session, null, 2)
+}
+document.querySelector("button").addEventListener("click", async (e) => {
+  let session = await party.session("user")
+  try {
+    if (session) {
+      await party.disconnect("user")      // if logged in, log out
+    } else {
+      await party.connect("user")         // if logged out, log in
+    }
+    await render()
+  } catch (e) {
+    document.querySelector(".session").innerHTML = e.message
+  }
+})
+render()
+</script>
+</body>
+</html>
