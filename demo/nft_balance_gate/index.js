@@ -14,7 +14,7 @@ party.add("user", {
     // take a snapshot of ERC721 NFT balance (End of Sartoshi)
     // ONLY allow login if the account holds AT LEAST 1
     const end_of_sartoshi = "0xf7d134224a66c6a4ddeb7dee714a280b99044805"
-    let balance = await party.contract(web3, party.abi.erc20, end_of_sartoshi).balanceOf(account).call()
+    let balance = await party.contract(web3, party.abi.erc721, end_of_sartoshi).balanceOf(account).call()
     console.log("balance", balance)
     if (balance > 0) {
       return { balance: balance }
