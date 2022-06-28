@@ -1,7 +1,7 @@
 <html>
 <head>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
-<script src="https://unpkg.com/privatepartyjs@0.0.23/dist/privateparty.js"></script>
+<script src="https://unpkg.com/privatepartyjs@0.0.29/dist/privateparty.js"></script>
 <style>
 .hidden { display: none; }
 </style>
@@ -24,12 +24,12 @@ const render = async () => {
   document.querySelector(".session").innerHTML = JSON.stringify(session, null, 2)
 }
 document.querySelector("button").addEventListener("click", async (e) => {
-  let session = await party.session("user")
+  let session = await party.session("admin")
   try {
     if (session) {
-      await party.disconnect("user")      // if logged in, log out
+      await party.disconnect("admin")      // if logged in, log out
     } else {
-      await party.connect("user")         // if logged out, log in
+      await party.connect("admin")         // if logged out, log in
     }
     await render()
   } catch (e) {

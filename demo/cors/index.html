@@ -13,7 +13,10 @@
 </nav>
 <script>
 const web3 = new Web3(window.ethereum)
-const party = new Privateparty({ web3 })
+const party = new Privateparty({
+  web3,
+  host: "http://localhost:3000"
+})
 const render = async () => {
   let session = await party.session("user")
   // if logged in (session.user exists), it's a logout button. if logged out, it's a login button.

@@ -1,6 +1,7 @@
 const express = require('express')
 const sigUtil = require('@metamask/eth-sig-util')
 const csurf = require('csurf')
+const cors = require('cors')
 const cookieParser = require('cookie-parser');
 const { v4: uuidv4 } = require('uuid');
 const Token = require('./token')
@@ -29,16 +30,19 @@ class Privateparty {
     erc721: ERC721,
     ownable: OWNABLE
   }
-  constructor (secret) {
-    secret = (secret ? secret : uuidv4());
+  constructor (o) {
+    this.secret = (o && o.secret ? o.secret : uuidv4())
     this.engines = {}
     this.express = express
     this.auth = this.auth.bind(this)
     this.app = app
-    this.app.use(cookieParser(secret));
+    this.app.use(cookieParser(this.secret));
     this.app.use(this.express.urlencoded({ extended: true }))
     this.app.use(this.express.json())
-
+    if (o && o.cors) {
+      this.app.use(cors(o.cors))  // set cors options if exists
+      this.app.options('*', cors())
+    }
     this.app.get("/privateparty", csrfProtection, (req, res) => {
       // get all the installed engines 
       let engines = {
@@ -80,19 +84,18 @@ class Privateparty {
     this.app.post(engine.connect, csrfProtection, async (req, res) => {
       // verify that the string matches the format
       let csrfToken = req.headers['csrf-token']
-      let host = req.get("host")
       // must have been signed with the csrfToken as nonce
-      let re = new RegExp(`${host} authenticating [^ ]+ at [0-9]+ with nonce ${csrfToken}`)
+      let re = new RegExp(`authenticating [^ ]+ at [0-9]+ with nonce ${csrfToken}`)
       let isvalid = re.test(req.body.str)
       if (isvalid) {
         const signer = sigUtil.recoverPersonalSignature({
-          data: Buffer.from(req.body.str),//    .toString("hex"),
+          data: Buffer.from(req.body.str),
           signature: req.body.sig
         })
         if (signer) {
           let tokens = req.body.str.split(" ")
-          let address = tokens[2]
-          let timestamp = parseInt(tokens[4])
+          let address = tokens[1]
+          let timestamp = parseInt(tokens[3])
 
           // the signer must match the address
           if (signer.toLowerCase() === address.toLowerCase()) {
@@ -156,7 +159,6 @@ class Privateparty {
       } else {
         if (req.cookies) {
           req.session = {}
-          console.log("req.signedCookies", req.signedCookies)
           for(let key in req.signedCookies) {
             if (key !== "_csrf") {
               req.session[key] = JSON.parse(req.signedCookies[key])

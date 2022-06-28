@@ -16,12 +16,17 @@ party.add("user", {
     // take a snapshot of ERC721 NFT balance (End of Sartoshi)
     // ONLY allow login if the account holds AT LEAST 1
     let tokenURI = await party.contract(web3, party.abi.erc721, req.body.payload.collection).tokenURI(req.body.payload.tokenId).call()
-    let image = await fetch("https://ipfs.io/ipfs/" + tokenURI.replace("ipfs://", ""))
-                      .then(r => r.json())
-                      .then(r => r.image)
-    return {
-      tokenURI,
-      image: "https://ipfs.io/ipfs/" + image.replace("ipfs://", "")
+    let owner = await party.contract(web3, party.abi.erc721, req.body.payload.collection).ownerOf(req.body.payload.tokenId).call()
+    if (owner.toLowerCase() === account) {
+      let image = await fetch("https://ipfs.io/ipfs/" + tokenURI.replace("ipfs://", ""))
+                        .then(r => r.json())
+                        .then(r => r.image)
+      return {
+        tokenURI,
+        image: "https://ipfs.io/ipfs/" + image.replace("ipfs://", "")
+      }
+    } else {
+      throw new Error("not the owner of the nft")
     }
   }
 })
