@@ -1,7 +1,6 @@
 <html>
 <head>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
-<script src="https://unpkg.com/privatepartyjs@0.0.29/dist/privateparty.js"></script>
+<script src="https://unpkg.com/privatepartyjs@0.0.37/dist/privateparty.js"></script>
 <style>
 .hidden { display: none; }
 </style>
@@ -12,8 +11,7 @@
   <pre class='session'></pre>
 </nav>
 <script>
-const web3 = new Web3(window.ethereum)
-const party = new Privateparty({ web3 })
+const party = new Privateparty()
 const render = async () => {
   let session = await party.session("user")
   // if logged in (session.user exists), it's a logout button. if logged out, it's a login button.

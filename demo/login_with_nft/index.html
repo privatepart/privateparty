@@ -1,7 +1,6 @@
 <html>
 <head>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.7.4/web3.min.js"></script>
-<script src="https://unpkg.com/privatepartyjs@0.0.29/dist/privateparty.js"></script>
+<script src="https://unpkg.com/privatepartyjs@0.0.37/dist/privateparty.js"></script>
 <style>
 .hidden { display: none; }
 img { width: 50px; height: 50px; flex-shrink: 0; margin-right: 10px; border-radius: 50px; }
@@ -19,8 +18,7 @@ nav { display: flex; align-items: center; }
 </nav>
 <pre class='session'></pre>
 <script>
-const web3 = new Web3(window.ethereum)
-const party = new Privateparty({ web3 })
+const party = new Privateparty()
 const render = async () => {
   let session = await party.session("user")
   document.querySelector("button").innerHTML = (session ? "logout" : "login")
