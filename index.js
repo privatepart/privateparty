@@ -33,15 +33,23 @@ class Privateparty {
   constructor (o) {
     this.secret = (o && o.secret ? o.secret : uuidv4())
     this.engines = {}
-    this.express = express
     this.auth = this.auth.bind(this)
-    this.app = app
-    this.app.use(cookieParser(this.secret));
-    this.app.use(this.express.urlencoded({ extended: true }))
-    this.app.use(this.express.json())
+    if (o && o.express) {
+      this.express = o.express
+    } else {
+      this.express = express
+    }
+    if (o && o.app) {
+      this.app = o.app
+    } else {
+      this.app = this.express()
+    }
+    this.use("cookieParser", cookieParser(this.secret))
+    this.use("urlencodedParser", this.express.urlencoded({ extended: true }))
+    this.use("jsonParser", this.express.json())
     if (o && o.cors) {
-      this.app.use(cors(o.cors))  // set cors options if exists
-      this.app.options('*', cors())
+      this.use("corsMiddleware", cors(o.cors))  // set cors options if exists
+      this.app.options('*', cors(o.cors))
     }
     this.app.get("/privateparty", csrfProtection, (req, res) => {
       // get all the installed engines 
@@ -60,6 +68,19 @@ class Privateparty {
       }
       res.json(engines)
     })
+  }
+  use(name, middleware) {
+    // use a middleware, or override if it already exists
+    if (this.app._router) {
+      for(let i=0; i<this.app._router.stack.length; i++) {
+        if (this.app._router.stack[i].name === name) {
+          // the middleware already exists. remove and break
+          this.app._router.stack.splice(i, 1);
+          break;
+        }
+      }
+    }
+    this.app.use(middleware)
   }
   add(name, engine) {
     engine = (engine ? engine : {})
@@ -96,7 +117,6 @@ class Privateparty {
           let tokens = req.body.str.split(" ")
           let address = tokens[1]
           let timestamp = parseInt(tokens[3])
-
           // the signer must match the address
           if (signer.toLowerCase() === address.toLowerCase()) {
             // the timestamp must not be expired (timestamp must be less than the current time but not too old : 60 seconds)

@@ -3,7 +3,7 @@ const party = new Privateparty({
   secret: "hello",
   cors: {
     credentials: true,
-    origin: ["http://localhost:8080", "http://localhost:3000"],
+    origin: ["http://localhost:8080"]
   }
 })
 party.add("user")

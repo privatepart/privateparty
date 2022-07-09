@@ -1,0 +1,18 @@
+const express = require('express')
+const cookieParser = require('cookie-parser');
+const cors = require('cors')
+const Privateparty = require('../../index')
+const app = express()
+const p = cookieParser("secret")
+//console.log("p", p)
+//app.use(p)
+//app.use(express.urlencoded({ extended: true }))
+//app.use(express.json())
+const party = new Privateparty({ app })
+//const party = new Privateparty()
+party.add("user")
+party.app.get("/", party.auth("user"), (req, res) => {
+  console.log("session", req.session)
+  res.sendFile(__dirname + "/index.html")
+})
+party.app.listen(3000)
