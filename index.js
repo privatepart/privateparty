@@ -1,7 +1,9 @@
 const express = require('express')
+const fs = require('fs')
 const sigUtil = require('@metamask/eth-sig-util')
 const csurf = require('csurf')
 const cors = require('cors')
+const path = require('path')
 const cookieParser = require('cookie-parser');
 const { v4: uuidv4 } = require('uuid');
 const Token = require('./token')
@@ -131,7 +133,7 @@ class Privateparty {
                     base.auth = r
                   }
                 } catch (e) {
-                  res.status(500).send({error: e.message})
+                  res.status(401).send({error: e.message})
                   return
                 }
               }
@@ -146,16 +148,16 @@ class Privateparty {
               res.clearCookie("_csrf")
               res.json(base)
             } else {
-              res.status(500).send({error: "signature expired"})
+              res.status(401).send({error: "signature expired"})
             }
           } else {
-            res.status(500).send({error: "invalid signer"})
+            res.status(401).send({error: "invalid signer"})
           }
         } else {
-          res.status(500).send({error: "invalid signature"})
+          res.status(401).send({error: "invalid signature"})
         }
       } else {
-        res.status(500).send({error: "invalid signature data"})
+        res.status(401).send({error: "invalid signature data"})
       }
     })
     this.app.post(engine.disconnect, async (req, res) => {
@@ -188,6 +190,46 @@ class Privateparty {
           req.session = null
         }
         next()
+      }
+    }
+  }
+  protect (name, handler) {
+    return (req, res, next) => {
+      if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
+        next()
+      } else {
+        if (req.cookies) {
+          req.session = {}
+          for(let key in req.signedCookies) {
+            if (key !== "_csrf") {
+              req.session[key] = JSON.parse(req.signedCookies[key])
+            }
+          }
+        } else {
+          req.session = null
+        }
+        if (req.session && req.session[name]) {
+          // logged in
+          next()
+        } else {
+          // logged out 
+          if (handler) {
+            console.log("handler", handler)
+            if (handler.redirect) {
+              res.redirect(handler.redirect)
+            } else if (handler.render) {
+              res.status(401).set('Content-Type', 'text/html').sendFile(handler.render)
+            } else {
+              fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
+                res.status(401).set('Content-Type', 'text/html').send(str.replace("{name}", name))
+              })
+            }
+          } else {
+            fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
+              res.status(401).set('Content-Type', 'text/html').send(str.replace("{name}", name))
+            })
+          }
+        }
       }
     }
   }

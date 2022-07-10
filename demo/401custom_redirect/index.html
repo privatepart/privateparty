@@ -1,0 +1,19 @@
+<html>
+<head>
+<script src="https://unpkg.com/privatepartyjs@0.0.37/dist/privateparty.js"></script>
+</head>
+<body>
+<nav>
+  <button id='logout'>logout</button>
+  <h1>Exclusive Content!!!</h1>
+  <div>You can only see this if you're logged in</div>
+</nav>
+<script>
+const party = new Privateparty()
+document.querySelector("#logout").addEventListener("click", async (e) => {
+  let session = await party.disconnect("user")
+  location.href = "/"
+})
+</script>
+</body>
+</html>

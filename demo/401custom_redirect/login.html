@@ -1,0 +1,54 @@
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://unpkg.com/privatepartyjs@0.0.37/dist/privateparty.js"></script>
+<style>
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: rgba(0,0,0,0.8);
+}
+a {
+  color: #4267b2;
+  text-decoration: none;
+}
+img {
+  max-width: 200px;
+  width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+main {
+  text-align: center;
+  max-width: 800px;
+}
+button {
+  margin: 20px;
+  background: firebrick;
+  border-radius: 4px;
+  color: white;
+  font-weight: bold;
+  border: none;
+  padding: 10px 20px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<main>
+<button id='login'>Login with Wallet</button>
+</main>
+<script>
+const party = new Privateparty()
+document.querySelector("#login").addEventListener("click", async (e) => {
+  let session = await party.connect("user")
+  location.href = "/"
+})
+</script>
+</body>
+</html>
