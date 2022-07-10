@@ -34,6 +34,16 @@ class Privateparty {
     ownable: OWNABLE
   }
   constructor (o) {
+    if (typeof o === 'string') {
+      // if the config is string type, it's the file path to the config object
+      o = require(path.resolve(o))
+    } else if (!o) {
+      // if nothing was passed, try to look for privateparty.config.js
+      let exists = fs.existsSync(path.resolve("privateparty.config.js"))
+      if (exists) {
+        o = require(path.resolve("privateparty.config.js"))
+      }
+    }
     this.secret = (o && o.secret ? o.secret : uuidv4())
     this.engines = {}
     this.auth = this.auth.bind(this)
