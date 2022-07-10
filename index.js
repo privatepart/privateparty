@@ -1,3 +1,4 @@
+const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
 const express = require('express')
 const fs = require('fs')
 const sigUtil = require('@metamask/eth-sig-util')
@@ -124,11 +125,24 @@ class Privateparty {
             // the timestamp must not be expired (timestamp must be less than the current time but not too old : 60 seconds)
             let now = Date.now()
             if (timestamp < now && timestamp > now - 1000 * 60) {
-
               let base = { account: signer.toLowerCase() }
               if (engine.authorize) {
                 try {
-                  let r = await engine.authorize(req, signer.toLowerCase())
+                  let r
+                  if (engine.contracts) {
+                    let contracts = {}
+                    for(let key in engine.contracts) {
+                      let config = engine.contracts[key]
+                      if (!config.rpc) throw new Error(`required field: contracts.${key}.rpc`)
+                      if (!config.address) throw new Error(`required field: contracts.${key}.address`)
+                      if (!config.abi) throw new Error(`required field: contracts.${key}.abi`)
+                      let web3 = createAlchemyWeb3(config.rpc)
+                      contracts[key] = new web3.eth.Contract(config.abi, config.address)
+                    }
+                    r = await engine.authorize(req, signer.toLowerCase(), contracts)
+                  } else {
+                    r = await engine.authorize(req, signer.toLowerCase())
+                  }
                   if (r) {
                     base.auth = r
                   }
@@ -137,7 +151,6 @@ class Privateparty {
                   return
                 }
               }
-
               const c = {
                 expires: new Date(Date.now() + engine.expire * 1000),
                 secure: (req.headers.origin.startsWith("https") ? true : false),
