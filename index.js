@@ -34,17 +34,14 @@ class Privateparty {
     ownable: OWNABLE
   }
   constructor (o) {
-    if (typeof o === 'string') {
-      // if the config is string type, it's the file path to the config object
-      o = require(path.resolve(o))
-    } else if (!o) {
-      // if nothing was passed, try to look for privateparty.config.js
-      let exists = fs.existsSync(path.resolve("privateparty.config.js"))
-      if (exists) {
-        o = require(path.resolve("privateparty.config.js"))
-      }
+    if (o && o.config) {
+      this.config = o.config() 
     }
-    this.secret = (o && o.secret ? o.secret : uuidv4())
+    if (this.config && this.config.secret) {
+      this.secret = this.config.secret
+    } else {
+      this.secret = (o && o.secret ? o.secret : uuidv4())
+    }
     this.engines = {}
     this.auth = this.auth.bind(this)
     if (o && o.express) {
@@ -60,7 +57,11 @@ class Privateparty {
     this.use("cookieParser", cookieParser(this.secret))
     this.use("urlencodedParser", this.express.urlencoded({ extended: true }))
     this.use("jsonParser", this.express.json())
-    if (o && o.cors) {
+
+    if (this.config && this.config.cors) {
+      this.use("corsMiddleware", cors(this.config.cors))  // set cors options if exists
+      this.app.options('*', cors(this.config.cors))
+    } else if (o && o.cors) {
       this.use("corsMiddleware", cors(o.cors))  // set cors options if exists
       this.app.options('*', cors(o.cors))
     }
@@ -81,6 +82,7 @@ class Privateparty {
       }
       res.json(engines)
     })
+    if (o && o.install) o.install(this)
   }
   use(name, middleware) {
     // use a middleware, or override if it already exists
@@ -167,6 +169,9 @@ class Privateparty {
                 signed: true,
                 httpOnly: true,
               }
+              if (this.config && this.config.cors && this.config.cors.origin && this.config.cors.origin.length > 0) {
+                c.sameSite = "none"
+              }
               res.cookie(name, JSON.stringify(base), c)
               res.clearCookie("_csrf")
               res.json(base)
@@ -237,7 +242,6 @@ class Privateparty {
         } else {
           // logged out 
           if (handler) {
-            console.log("handler", handler)
             if (handler.redirect) {
               res.redirect(handler.redirect)
             } else if (handler.render) {
