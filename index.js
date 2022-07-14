@@ -195,21 +195,37 @@ class Privateparty {
   contract(web3, abi, address) {
     return new web3.eth.Contract(abi, address).methods
   }
+  processSession(req, name) {
+    if (req.headers && req.headers['authorization']) {
+      // Token authentication
+      let a = req.headers['authorization']
+      let s = a.split(' ')
+      let token = s[1]
+      let engine = this.engines[name]
+      if (engine.tokens && engine.tokens.includes(token)) {
+        req.session = {
+          [name]: { token }
+        }
+      } else {
+        req.session = null
+      }
+    } else if (req.cookies) {
+      req.session = {}
+      for(let key in req.signedCookies) {
+        if (key !== "_csrf") {
+          req.session[key] = JSON.parse(req.signedCookies[key])
+        }
+      }
+    } else {
+      req.session = null
+    }
+  }
   auth (name) {
     return (req, res, next) => {
       if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
         next()
       } else {
-        if (req.cookies) {
-          req.session = {}
-          for(let key in req.signedCookies) {
-            if (key !== "_csrf") {
-              req.session[key] = JSON.parse(req.signedCookies[key])
-            }
-          }
-        } else {
-          req.session = null
-        }
+        this.processSession(req, name)
         next()
       }
     }
@@ -219,16 +235,7 @@ class Privateparty {
       if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
         next()
       } else {
-        if (req.cookies) {
-          req.session = {}
-          for(let key in req.signedCookies) {
-            if (key !== "_csrf") {
-              req.session[key] = JSON.parse(req.signedCookies[key])
-            }
-          }
-        } else {
-          req.session = null
-        }
+        this.processSession(req, name)
         if (req.session && req.session[name]) {
           // logged in
           next()
