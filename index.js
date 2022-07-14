@@ -34,14 +34,8 @@ class Privateparty {
     ownable: OWNABLE
   }
   constructor (o) {
-    if (o && o.config) {
-      this.config = o.config() 
-    }
-    if (this.config && this.config.secret) {
-      this.secret = this.config.secret
-    } else {
-      this.secret = (o && o.secret ? o.secret : uuidv4())
-    }
+    this.config = o
+    this.secret = (o && o.secret ? o.secret : uuidv4())
     this.engines = {}
     this.auth = this.auth.bind(this)
     if (o && o.express) {
@@ -57,11 +51,7 @@ class Privateparty {
     this.use("cookieParser", cookieParser(this.secret))
     this.use("urlencodedParser", this.express.urlencoded({ extended: true }))
     this.use("jsonParser", this.express.json())
-
-    if (this.config && this.config.cors) {
-      this.use("corsMiddleware", cors(this.config.cors))  // set cors options if exists
-      this.app.options('*', cors(this.config.cors))
-    } else if (o && o.cors) {
+    if (o && o.cors) {
       this.use("corsMiddleware", cors(o.cors))  // set cors options if exists
       this.app.options('*', cors(o.cors))
     }
@@ -82,7 +72,6 @@ class Privateparty {
       }
       res.json(engines)
     })
-    if (o && o.install) o.install(this)
   }
   use(name, middleware) {
     // use a middleware, or override if it already exists
@@ -170,7 +159,11 @@ class Privateparty {
                 httpOnly: true,
               }
               if (this.config && this.config.cors && this.config.cors.origin && this.config.cors.origin.length > 0) {
-                c.sameSite = "none"
+                if (req.headers.origin.startsWith("http://localhost")) {
+                  // lax => localhost doesn't allow samesite cookies
+                } else {
+                  c.sameSite = "none"
+                }
               }
               res.cookie(name, JSON.stringify(base), c)
               res.clearCookie("_csrf")
