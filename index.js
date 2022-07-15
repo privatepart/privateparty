@@ -88,9 +88,9 @@ class Privateparty {
   }
   add(name, engine) {
     engine = (engine ? engine : {})
-    if (!engine.session) engine.session = "/session"
-    if (!engine.connect) engine.connect = "/connect"
-    if (!engine.disconnect) engine.disconnect = "/disconnect"
+    if (!engine.session) engine.session = "/privateparty/session/" + name
+    if (!engine.connect) engine.connect = "/privateparty/connect/" + name
+    if (!engine.disconnect) engine.disconnect = "/privateparty/disconnect/" + name
     if (!engine.expire) engine.expire = 60 * 60 * 24 * 30  // default: 30 day later
     this.engines[name] = engine
     this.app.get(engine.session, (req, res) => {
@@ -195,7 +195,7 @@ class Privateparty {
   contract(web3, abi, address) {
     return new web3.eth.Contract(abi, address).methods
   }
-  processSession(req, name) {
+  check(req, name) {
     if (req.headers && req.headers['authorization']) {
       // Token authentication
       let a = req.headers['authorization']
@@ -209,6 +209,7 @@ class Privateparty {
       } else {
         req.session = null
       }
+      req.authtype = "token"
     } else if (req.cookies) {
       req.session = {}
       for(let key in req.signedCookies) {
@@ -216,8 +217,29 @@ class Privateparty {
           req.session[key] = JSON.parse(req.signedCookies[key])
         }
       }
+      req.authtype = "cookie"
     } else {
       req.session = null
+    }
+    return req.session
+  }
+  error(res, name, handler) {
+    if (handler) {
+      if (handler.redirect) {
+        res.redirect(handler.redirect)
+      } else if (handler.render) {
+        res.status(401).set('Content-Type', 'text/html').sendFile(handler.render)
+      } else if (handler.json) {
+        res.status(402).json(handler.json)
+      } else {
+        fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
+          res.status(401).set('Content-Type', 'text/html').send(str.replace("{name}", name))
+        })
+      }
+    } else {
+      fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
+        res.status(401).set('Content-Type', 'text/html').send(str.replace("{name}", name))
+      })
     }
   }
   auth (name) {
@@ -225,39 +247,59 @@ class Privateparty {
       if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
         next()
       } else {
-        this.processSession(req, name)
+        this.check(req, name)
         next()
       }
     }
   }
-  protect (name, handler) {
+  protect2 (mapping, handler) {
+    return (req, res, next) => {
+      // cookie authentication setup route => always pass
+      if (mapping.cookie && req.originalUrl === this.engines[mapping.cookie].connect || req.originalUrl === this.engines[mapping.cookie].disconnect) {
+        next()
+      } else {
+        // loop through the roles and check until matches
+        for(let key in mapping) {
+          // key := "token"|"cookie"
+          let session = this.check(req, mapping[key])
+          if (session) break;
+        }
+        if (req.session && Object.keys(req.session).length > 0) {
+          // at least one of the sessions is available
+          next()
+        } else {
+          // if the request was token authenticated, return json
+          // if the request was cookie authenticated, return html
+          this.error(res, mapping[req.authtype], handler)
+        }
+      }
+    }
+  }
+  protect1 (name, handler) {
     return (req, res, next) => {
       if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
         next()
       } else {
-        this.processSession(req, name)
+        this.check(req, name)
         if (req.session && req.session[name]) {
           // logged in
           next()
         } else {
-          // logged out 
-          if (handler) {
-            if (handler.redirect) {
-              res.redirect(handler.redirect)
-            } else if (handler.render) {
-              res.status(401).set('Content-Type', 'text/html').sendFile(handler.render)
-            } else {
-              fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
-                res.status(401).set('Content-Type', 'text/html').send(str.replace("{name}", name))
-              })
-            }
-          } else {
-            fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
-              res.status(401).set('Content-Type', 'text/html').send(str.replace("{name}", name))
-            })
-          }
+          //// logged out 
+          this.error(res, name, handler)
         }
       }
+    }
+  }
+  /*
+  protect1: party.protect({ token: "api", cookie: "admin" }, handler)
+  protect2: party.protect("api", handler)
+  */
+  protect (name, handler) {
+    if (typeof name === 'string') {
+      return this.protect1(name, handler)
+    } else {
+      return this.protect2(name, handler)
     }
   }
 }
