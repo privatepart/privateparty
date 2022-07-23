@@ -17,7 +17,7 @@ party.add("user", {
     let balance = await party.contract(web3, party.abi.erc721, end_of_sartoshi).balanceOf(account).call()
     console.log("balance", balance)
     if (balance > 0) {
-      return { balance: balance }
+      return { balance: balance, contract: end_of_sartoshi }
     } else {
       // If the balance is 0, don't allow login
       throw new Error("must own at least one 'end of sartoshi'")

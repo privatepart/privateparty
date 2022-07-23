@@ -6,6 +6,7 @@ const csurf = require('csurf')
 const cors = require('cors')
 const path = require('path')
 const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken')
 const { v4: uuidv4 } = require('uuid');
 const Token = require('./token')
 const ERC20 = require('./abi/erc20.json')
@@ -86,6 +87,17 @@ class Privateparty {
     }
     this.app.use(middleware)
   }
+  verify(x) {
+    return new Promise((resolve, reject) => {
+      jwt.verify(x, this.secret, (err, decoded) => {
+        if (err) {
+          resolve(null)
+        } else {
+          resolve(decoded)
+        }
+      })
+    })
+  }
   add(name, engine) {
     engine = (engine ? engine : {})
     if (!engine.session) engine.session = "/privateparty/session/" + name
@@ -93,11 +105,15 @@ class Privateparty {
     if (!engine.disconnect) engine.disconnect = "/privateparty/disconnect/" + name
     if (!engine.expire) engine.expire = 60 * 60 * 24 * 30  // default: 30 day later
     this.engines[name] = engine
-    this.app.get(engine.session, (req, res) => {
-      if (req.signedCookies) {
+    this.app.get(engine.session, async (req, res) => {
+      if (req.cookies) {
         let session = {}
-        if (req.signedCookies[name]) {
-          session[name] = JSON.parse(req.signedCookies[name])
+        if (req.cookies[name]) {
+          if (req.cookies[name]) {
+            session[name] = await this.verify(req.cookies[name])
+          } else {
+            session[name] = null
+          }
         } else {
           session[name] = null
         }
@@ -126,7 +142,7 @@ class Privateparty {
             // the timestamp must not be expired (timestamp must be less than the current time but not too old : 60 seconds)
             let now = Date.now()
             if (timestamp < now && timestamp > now - 1000 * 60) {
-              let base = { account: signer.toLowerCase() }
+              let base = { account: signer.toLowerCase(), expiresIn: engine.expire }
               if (engine.authorize) {
                 try {
                   let r
@@ -152,10 +168,10 @@ class Privateparty {
                   return
                 }
               }
+              const token = jwt.sign(base, this.secret)
               const c = {
                 expires: new Date(Date.now() + engine.expire * 1000),
                 secure: (req.headers.origin.startsWith("https") ? true : false),
-                signed: true,
                 httpOnly: true,
               }
               if (this.config && this.config.cors && this.config.cors.origin && this.config.cors.origin.length > 0) {
@@ -165,7 +181,8 @@ class Privateparty {
                   c.sameSite = "none"
                 }
               }
-              res.cookie(name, JSON.stringify(base), c)
+              //res.cookie(name, JSON.stringify(base), c)
+              res.cookie(name, token, c)
               res.clearCookie("_csrf")
               res.json(base)
             } else {
@@ -185,7 +202,7 @@ class Privateparty {
       if (req.body.name) {
         res.clearCookie(req.body.name)
       } else {
-        for(let key in req.signedCookies) {
+        for(let key in req.cookies) {
           res.clearCookie(key)
         }
       }
@@ -195,7 +212,7 @@ class Privateparty {
   contract(web3, abi, address) {
     return new web3.eth.Contract(abi, address).methods
   }
-  check(req, name) {
+  async check(req, name) {
     if (req.headers && req.headers['authorization']) {
       // Token authentication
       let a = req.headers['authorization']
@@ -212,9 +229,9 @@ class Privateparty {
       req.authtype = "token"
     } else if (req.cookies) {
       req.session = {}
-      for(let key in req.signedCookies) {
+      for(let key in req.cookies) {
         if (key !== "_csrf") {
-          req.session[key] = JSON.parse(req.signedCookies[key])
+          req.session[key] = await this.verify(req.cookies[key])
         }
       }
       req.authtype = "cookie"
@@ -243,17 +260,17 @@ class Privateparty {
     }
   }
   auth (name) {
-    return (req, res, next) => {
+    return async (req, res, next) => {
       if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
         next()
       } else {
-        this.check(req, name)
+        await this.check(req, name)
         next()
       }
     }
   }
   protect2 (mapping, handler) {
-    return (req, res, next) => {
+    return async (req, res, next) => {
       // cookie authentication setup route => always pass
       if (mapping.cookie && req.originalUrl === this.engines[mapping.cookie].connect || req.originalUrl === this.engines[mapping.cookie].disconnect) {
         next()
@@ -261,7 +278,7 @@ class Privateparty {
         // loop through the roles and check until matches
         for(let key in mapping) {
           // key := "token"|"cookie"
-          let session = this.check(req, mapping[key])
+          let session = await this.check(req, mapping[key])
           if (session) break;
         }
         if (req.session && Object.keys(req.session).length > 0) {
@@ -276,11 +293,11 @@ class Privateparty {
     }
   }
   protect1 (name, handler) {
-    return (req, res, next) => {
+    return async (req, res, next) => {
       if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
         next()
       } else {
-        this.check(req, name)
+        await this.check(req, name)
         if (req.session && req.session[name]) {
           // logged in
           next()
