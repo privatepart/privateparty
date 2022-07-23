@@ -5,17 +5,26 @@
 ///////////////////////////////////////////////////////////////////////////////////////////
 require('dotenv').config()
 const Privateparty = require('../../index')
-const { createAlchemyWeb3 } = require("@alch/alchemy-web3");
-const web3 = createAlchemyWeb3(process.env.RPC)
 const party = new Privateparty()
 party.add("user", {
-  authorize: async (req, account, engine) => {
+  contracts: {
+    end_of_sartoshi: {
+      address: "0xf7d134224a66c6a4ddeb7dee714a280b99044805",
+      abi: party.abi.erc721,
+      rpc: process.env.RPC
+    },
+    canvas: {
+      address: "0x6866ed9a183f491024692971a8f78b048fb6b89b",
+      abi: party.abi.erc721,
+      rpc: process.env.RPC
+    }
+  },
+  authorize: async (req, account, contracts) => {
+    console.log(contracts)
     // take a snapshot of ERC721 NFT balance (End of Sartoshi)
     // ONLY allow login if the account holds AT LEAST 1
-    const end_of_sartoshi = "0xf7d134224a66c6a4ddeb7dee714a280b99044805"
-    const canvas = "0x6866ed9a183f491024692971a8f78b048fb6b89b"
-    let sartoshi_balance = await party.contract(web3, party.abi.erc721, end_of_sartoshi).balanceOf(account).call()
-    let canvas_balance = await party.contract(web3, party.abi.erc721, canvas).balanceOf(account).call()
+    let sartoshi_balance = await contracts.end_of_sartoshi.methods.balanceOf(account).call()
+    let canvas_balance = await contracts.canvas.methods.balanceOf(account).call()
     if (sartoshi_balance > 0 && canvas_balance > 0) {
       return { sartoshi: sartoshi_balance, canvas: canvas_balance }
     } else {

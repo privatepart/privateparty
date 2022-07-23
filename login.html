@@ -54,7 +54,7 @@ button:hover {
 <footer>powered by <a href="https://privateparty.papercorp.org">privateparty</a></footer>
 </main>
 <script>
-const party = new Privateparty()
+const party = new Privateparty({options})
 document.querySelector("#login").addEventListener("click", async (e) => {
   try {
     let session = await party.connect("{name}")

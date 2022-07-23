@@ -1,0 +1,6 @@
+const Privateparty = require('../../index')
+const path = require('path')
+const party = new Privateparty()
+party.add("user")
+party.app.use("/", party.protect("user"), party.express.static(path.resolve(__dirname, "public")))
+party.app.listen(3000)

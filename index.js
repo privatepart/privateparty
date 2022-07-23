@@ -122,7 +122,7 @@ class Privateparty {
         res.json({})
       }
     })
-    this.app.post(engine.connect, csrfProtection, async (req, res) => {
+    this.app.post(engine.connect, async (req, res) => {
       // verify that the string matches the format
       let csrfToken = req.headers['csrf-token']
       // must have been signed with the csrfToken as nonce
@@ -169,9 +169,11 @@ class Privateparty {
                 }
               }
               const token = jwt.sign(base, this.secret)
+              base.jwt = token    // return the jwt as well
+
               const c = {
                 expires: new Date(Date.now() + engine.expire * 1000),
-                secure: (req.headers.origin.startsWith("https") ? true : false),
+                secure: (req.headers.origin && req.headers.origin.startsWith("https") ? true : false),
                 httpOnly: true,
               }
               if (this.config && this.config.cors && this.config.cors.origin && this.config.cors.origin.length > 0) {
@@ -181,7 +183,6 @@ class Privateparty {
                   c.sameSite = "none"
                 }
               }
-              //res.cookie(name, JSON.stringify(base), c)
               res.cookie(name, token, c)
               res.clearCookie("_csrf")
               res.json(base)
@@ -213,21 +214,32 @@ class Privateparty {
     return new web3.eth.Contract(abi, address).methods
   }
   async check(req, name) {
+    // If the request contains an "authorization" header, it's a token authenticated request
     if (req.headers && req.headers['authorization']) {
-      // Token authentication
       let a = req.headers['authorization']
       let s = a.split(' ')
       let token = s[1]
       let engine = this.engines[name]
       if (engine.tokens && engine.tokens.includes(token)) {
+        // hardcoded access token authentication
         req.session = {
           [name]: { token }
         }
       } else {
-        req.session = null
+        // jwt token authentication
+        let extracted = await this.verify(token)
+        if (extracted) {
+          req.session = {
+            [name]: extracted
+          }
+        } else {
+          req.session = null
+        }
       }
       req.authtype = "token"
-    } else if (req.cookies) {
+    }
+    // If the request contains cookies, it's an in-browser request.
+    else if (req.cookies) {
       req.session = {}
       for(let key in req.cookies) {
         if (key !== "_csrf") {
@@ -235,7 +247,9 @@ class Privateparty {
         }
       }
       req.authtype = "cookie"
-    } else {
+    }
+    // Otherwise, null session
+    else {
       req.session = null
     }
     return req.session
@@ -247,15 +261,19 @@ class Privateparty {
       } else if (handler.render) {
         res.status(401).set('Content-Type', 'text/html').sendFile(handler.render)
       } else if (handler.json) {
-        res.status(402).json(handler.json)
+        res.status(401).json(handler.json)
       } else {
         fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
-          res.status(401).set('Content-Type', 'text/html').send(str.replace("{name}", name))
+          str = str.replace("{name}", name)
+          if (handler.walletconnect) str = str.replace("{options}", JSON.stringify({ walletconnect: handler.walletconnect }))
+          res.status(401).set('Content-Type', 'text/html').send(str)
         })
       }
     } else {
       fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
-        res.status(401).set('Content-Type', 'text/html').send(str.replace("{name}", name))
+        str = str.replace("{name}", name)
+        str = str.replace("{options}", "")
+        res.status(401).set('Content-Type', 'text/html').send(str)
       })
     }
   }
@@ -269,6 +287,8 @@ class Privateparty {
       }
     }
   }
+
+  // advanced protection (both access token protect + cookie protection)
   protect2 (mapping, handler) {
     return async (req, res, next) => {
       // cookie authentication setup route => always pass
@@ -292,6 +312,8 @@ class Privateparty {
       }
     }
   }
+
+  // cookie protection
   protect1 (name, handler) {
     return async (req, res, next) => {
       if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
