@@ -1,13 +1,13 @@
 {
   "name": "privateparty",
-  "version": "0.0.42",
+  "version": "0.0.44",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@alch/alchemy-web3": "^1.4.2",
     "@metamask/eth-sig-util": "^4.0.1",

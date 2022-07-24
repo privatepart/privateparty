@@ -2,6 +2,6 @@
 
 > Privateparty server
 
-Documentation: https://privateparty.papercorp.org
+Documentation: https://privateparty.dev
 
 ![preview.jpeg](preview.jpeg)
