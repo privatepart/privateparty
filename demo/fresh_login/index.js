@@ -1,0 +1,5 @@
+const Privateparty = require('../../index')
+const party = new Privateparty()
+party.add("user")
+party.app.use("/", party.auth("user"), party.express.static(__dirname))
+party.app.listen(3000)

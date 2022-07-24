@@ -3,7 +3,7 @@ const party = new Privateparty()
 party.add("user", {
   tokens: ["12345"]
 })
-party.app.get("/api", party.protect("user"), (req, res) => {
+party.app.get("/api", party.protect("user", { json: { error: "unauthorized" } }), (req, res) => {
   res.json({
     success: true
   })

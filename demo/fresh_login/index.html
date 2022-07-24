@@ -11,9 +11,8 @@
   <pre class='session'></pre>
 </nav>
 <script>
-const party = new Privateparty({
-  host: "http://localhost:3000"
-})
+// "cache: true" caches the logged in provider
+const party = new Privateparty() 
 const render = async () => {
   let session = await party.session("user")
   // if logged in (session.user exists), it's a logout button. if logged out, it's a login button.
@@ -27,7 +26,7 @@ document.querySelector("button").addEventListener("click", async (e) => {
     if (session) {
       await party.disconnect("user")      // if logged in, log out
     } else {
-      await party.connect("user")         // if logged out, log in
+      await party.connect("user", null, { fresh: true })         // if logged out, log in
     }
     await render()
   } catch (e) {

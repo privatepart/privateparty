@@ -265,7 +265,16 @@ class Privateparty {
       } else {
         fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
           str = str.replace("{name}", name)
-          if (handler.walletconnect) str = str.replace("{options}", JSON.stringify({ walletconnect: handler.walletconnect }))
+          if (handler.walletconnect) {
+            str = str.replace("{options}", JSON.stringify({ walletconnect: handler.walletconnect }))
+          } else {
+            str = str.replace("{options}", "")
+          }
+          if (handler.fresh) {
+            str = str.replace("{connect_options}", JSON.stringify({ fresh: true }))
+          } else {
+            str = str.replace("{connect_options}", "null")
+          }
           res.status(401).set('Content-Type', 'text/html').send(str)
         })
       }
@@ -273,6 +282,7 @@ class Privateparty {
       fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
         str = str.replace("{name}", name)
         str = str.replace("{options}", "")
+        str = str.replace("{connect_options}", "null")
         res.status(401).set('Content-Type', 'text/html').send(str)
       })
     }
