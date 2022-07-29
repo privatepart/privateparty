@@ -44,6 +44,9 @@ class Privateparty {
     } else {
       this.express = express
     }
+    if (o && o.gate) {
+      this.gate = o.gate
+    }
     if (o && o.app) {
       this.app = o.app
     } else {
@@ -65,6 +68,7 @@ class Privateparty {
       for(let key in this.engines) {
         let e = this.engines[key]
         engines.parties[key] = {
+          gate: e.gate,
           session: e.session,
           connect: e.connect,
           disconnect: e.disconnect,
@@ -98,8 +102,26 @@ class Privateparty {
       })
     })
   }
+  renderGate(name, res, handler) {
+    if (!handler) handler = this.gate // if handler is not set, use the default gate handler
+    fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
+      str = str.replaceAll("{name}", name)
+      if (handler && handler.walletconnect) {
+        str = str.replaceAll("{options}", JSON.stringify({ walletconnect: handler.walletconnect }))
+      } else {
+        str = str.replaceAll("{options}", "")
+      }
+      if (handler && handler.fresh) {
+        str = str.replaceAll("{connect_options}", JSON.stringify({ fresh: true }))
+      } else {
+        str = str.replaceAll("{connect_options}", "null")
+      }
+      res.status(200).set('Content-Type', 'text/html').send(str)
+    })
+  }
   add(name, engine) {
     engine = (engine ? engine : {})
+    if (!engine.gate) engine.gate = "/privateparty/gate/" + name
     if (!engine.session) engine.session = "/privateparty/session/" + name
     if (!engine.connect) engine.connect = "/privateparty/connect/" + name
     if (!engine.disconnect) engine.disconnect = "/privateparty/disconnect/" + name
@@ -121,6 +143,9 @@ class Privateparty {
       } else {
         res.json({})
       }
+    })
+    this.app.get(engine.gate, (req, res) => {
+      this.renderGate(name, res, this.gate)
     })
     this.app.post(engine.connect, async (req, res) => {
       // verify that the string matches the format
@@ -263,28 +288,10 @@ class Privateparty {
       } else if (handler.json) {
         res.status(401).json(handler.json)
       } else {
-        fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
-          str = str.replace("{name}", name)
-          if (handler.walletconnect) {
-            str = str.replace("{options}", JSON.stringify({ walletconnect: handler.walletconnect }))
-          } else {
-            str = str.replace("{options}", "")
-          }
-          if (handler.fresh) {
-            str = str.replace("{connect_options}", JSON.stringify({ fresh: true }))
-          } else {
-            str = str.replace("{connect_options}", "null")
-          }
-          res.status(401).set('Content-Type', 'text/html').send(str)
-        })
+        this.renderGate(name, res, handler)
       }
     } else {
-      fs.promises.readFile(path.resolve(__dirname, "login.html"), "utf8").then((str) => {
-        str = str.replace("{name}", name)
-        str = str.replace("{options}", "")
-        str = str.replace("{connect_options}", "null")
-        res.status(401).set('Content-Type', 'text/html').send(str)
-      })
+      this.renderGate(name, res, handler)
     }
   }
   auth (name) {

@@ -31,6 +31,9 @@ main {
   text-align: center;
   max-width: 800px;
 }
+footer {
+  margin-top: 10px;
+}
 button {
   margin: 20px;
   background: #4267b2;
@@ -45,24 +48,58 @@ button {
 button:hover {
   background: #15419a;
 }
+button.disabled {
+  background: silver;
+}
+.hidden {
+  display: none;
+}
+.invisible {
+  visibility: hidden;
+}
 </style>
+<script>
+const params = new URLSearchParams(window.location.search)
+const party = new Privateparty({options})
+document.addEventListener("DOMContentLoaded", async () => {
+  let session = await party.session("{name}")
+  if (session && session.account) {
+    // logged in => display logout button
+    document.querySelector("#login").classList.add("hidden")
+    document.querySelector("#logout").addEventListener("click", async (e) => {
+      try {
+        let session = await party.disconnect("{name}")
+        let callback = params.get("callback") ? params.get("callback") : location.href
+        location.href = callback
+      } catch (e) {
+        alert(e.message)
+      }
+    })
+  } else {
+    // logged out => display login button
+    document.querySelector("#logout").classList.add("hidden")
+    document.querySelector("#login").addEventListener("click", async (e) => {
+      try {
+        let session = await party.connect("{name}", null, {connect_options})
+        let callback = params.get("callback") ? params.get("callback") : location.href
+        location.href = callback
+      } catch (e) {
+        alert(e.message)
+      }
+    })
+  }
+  document.querySelector(".btns").classList.remove("invisible")
+})
+</script>
 </head>
 <body>
 <main>
 <img src="data:image/png;base64,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">
-<button id='login'>Login with Wallet</button>
 <footer>powered by <a href="https://privateparty.dev">privateparty</a></footer>
+<div class='btns invisible'>
+  <button id='login'>Login with Wallet</button>
+  <button id='logout' class='disabled'>Log out</button>
+</div>
 </main>
-<script>
-const party = new Privateparty({options})
-document.querySelector("#login").addEventListener("click", async (e) => {
-  try {
-    let session = await party.connect("{name}", null, {connect_options})
-    location.href = location.href
-  } catch (e) {
-    alert(e.message)
-  }
-})
-</script>
 </body>
 </html>
