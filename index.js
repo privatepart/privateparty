@@ -167,7 +167,7 @@ class Privateparty {
             // the timestamp must not be expired (timestamp must be less than the current time but not too old : 60 seconds)
             let now = Date.now()
             if (timestamp < now && timestamp > now - 1000 * 60) {
-              let base = { account: signer.toLowerCase(), expiresIn: engine.expire }
+              let base = { account: signer.toLowerCase(), expiresIn: engine.expire, sub: signer.toLowerCase(), aud: name }
               if (engine.authorize) {
                 try {
                   let r

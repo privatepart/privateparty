@@ -1,0 +1,22 @@
+<html>
+<body>
+<nav>
+  <div class='user'>
+    <% if (session.user) { %>
+      <a href="/privateparty/gate/user?callback=/">Log out of user</a>
+    <% } else { %>
+      <a href="/privateparty/gate/user?callback=/">Login as user</a>
+    <% } %>
+  </div>
+  <div class='admin'>
+    <% if (session.admin) { %>
+      <a href="/privateparty/gate/admin?callback=/">Log out of admin</a>
+    <% } else { %>
+      <a href="/privateparty/gate/admin?callback=/">Login as admin</a>
+    <% } %>
+  </div>
+  <pre class='session'><%=JSON.stringify(session, null, 2)%></pre>
+</nav>
+</script>
+</body>
+</html>

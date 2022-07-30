@@ -48,8 +48,14 @@ button {
 button:hover {
   background: #15419a;
 }
+button.disabled:hover {
+  background: #f8dfe4;
+}
 button.disabled {
-  background: silver;
+  border: 1px solid crimson;
+  background: none;
+  color: crimson;
+  border-radius: 1px;
 }
 .hidden {
   display: none;
