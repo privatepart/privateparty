@@ -1,10 +1,11 @@
 const Privateparty = require('../../index')
 const party = new Privateparty()
 party.add("user", {
-  tokens: ["12345"]
+  session: "/user/session",
 })
-party.app.get("/api", party.auth("user"), (req, res) => {
+console.log(party.engines)
+party.app.get("/", party.auth("user"), (req, res) => {
   console.log("session", req.session)
-  res.json({ success: true })
+  res.sendFile(process.cwd() + "/index.html")
 })
 party.app.listen(3000)

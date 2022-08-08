@@ -1,6 +1,6 @@
 {
   "name": "privateparty",
-  "version": "0.0.45",
+  "version": "0.0.46",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -22,6 +22,7 @@
     "cross-fetch": "^3.1.5",
     "dotenv": "^16.0.1",
     "ejs": "^3.1.8",
-    "partyadmin": "^0.0.9"
+    "partyadmin": "^0.0.9",
+    "partypass": "^0.0.2"
   }
 }

@@ -1,0 +1,38 @@
+<html>
+<head>
+<script src="https://unpkg.com/partyconnect@0.0.41/dist/partyconnect.js"></script>
+<style>
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<nav>
+  <button></button>
+  <pre class='session'></pre>
+</nav>
+<script>
+const party = new Privateparty()
+const render = async () => {
+  let session = await party.session("user")
+  // if logged in (session.user exists), it's a logout button. if logged out, it's a login button.
+  document.querySelector("button").innerHTML = (session ? "logout" : "login")
+  // print the current session
+  document.querySelector(".session").innerHTML = JSON.stringify(session, null, 2)
+}
+document.querySelector("button").addEventListener("click", async (e) => {
+  let session = await party.session("user")
+  try {
+    if (session) {
+      await party.disconnect("user")      // if logged in, log out
+    } else {
+      await party.connect("user")         // if logged out, log in
+    }
+    await render()
+  } catch (e) {
+    document.querySelector(".session").innerHTML = e.message
+  }
+})
+render()
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<html>
+<head>
+<script src="https://unpkg.com/partyconnect@0.0.41/dist/partyconnect.js"></script>
+<style>
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/privateparty/gate/admin?callback=/">Account</a>
+  <pre></pre>
+</nav>
+<script>
+const party = new Privateparty()
+const render = async () => {
+  try {
+    let response = await fetch("/api").then((res) => {
+      if (res.ok) {
+        return res.json()
+      } else {
+        return res.json().then((json) => {
+          throw new Error(json.error)
+        })
+      }
+    })
+    document.querySelector("pre").innerHTML = JSON.stringify(response, null, 2)
+  } catch (e) {
+    document.querySelector("pre").innerHTML = e.message
+  }
+}
+render()
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<html>
+<head>
+<script src="https://unpkg.com/partyconnect@0.0.41/dist/partyconnect.js"></script>
+<style>
+.hidden { display: none; }
+.jwt > * { display: block; }
+</style>
+</head>
+<body>
+<nav>
+  <button id='user'>get user JWT</button>
+  <button id='admin'>get admin JWT</button>
+  <pre class='session'></pre>
+  <div class='jwt'>
+    <textarea id='jwt'></textarea>
+    <button id='api'>API request without auth token</button>
+    <button id='api2'>API request with auth token</button>
+    <button id='access'>API request with access token</button>
+    <pre id='response'></pre>
+  </div>
+</nav>
+<script>
+const party = new Privateparty()
+const render = async (role) => {
+  let session = await party.session(role)
+  document.querySelector(".session").innerHTML = JSON.stringify(session, null, 2)
+}
+document.querySelector("#user").addEventListener("click", async (e) => {
+  let {jwt} = await party.connect("user")
+  document.querySelector(".jwt").classList.remove("hidden")
+  document.querySelector("#jwt").value = jwt
+  await render("user")
+})
+document.querySelector("#admin").addEventListener("click", async (e) => {
+  let {jwt} = await party.connect("admin")
+  document.querySelector(".jwt").classList.remove("hidden")
+  document.querySelector("#jwt").value = jwt
+  await render("admin")
+})
+document.querySelector("#api").addEventListener("click", async (e) => {
+  try {
+    let res = await fetch("/api", {
+      method: "post",
+      credentials: "omit",    // without cookie
+    }).then(r => r.json())
+    document.querySelector("#response").innerHTML = JSON.stringify(res,null,2)
+  } catch (e) {
+    alert(e.message)
+  }
+})
+document.querySelector("#api2").addEventListener("click", async (e) => {
+  try {
+    let res = await fetch("/api", {
+      method: "post",
+      credentials: "omit",    // without cookie
+      headers: {
+        authorization: "token " + document.querySelector("#jwt").value
+      }
+    }).then(r => r.json())
+    document.querySelector("#response").innerHTML = JSON.stringify(res,null,2)
+  } catch (e) {
+    alert(e.message)
+  }
+})
+document.querySelector("#access").addEventListener("click", async (e) => {
+  try {
+    let res = await fetch("/api", {
+      method: "post",
+      credentials: "omit",    // without cookie
+      headers: {
+        authorization: "token access-token-12345",
+      }
+    }).then(r => r.json())
+    document.querySelector("#response").innerHTML = JSON.stringify(res,null,2)
+  } catch (e) {
+    alert(e.message)
+  }
+})
+//render()
+</script>
+</body>
+</html>

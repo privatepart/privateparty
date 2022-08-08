@@ -1,4 +1,4 @@
-# Access token authentication
+# access token auth
 
 an access token (in Privateparty context) is a "god token".
 
@@ -7,10 +7,28 @@ an access token (in Privateparty context) is a "god token".
 3. It can pass through any privateparty protection because it's considered an "admin" token
 4. Not recommended in production (use Privateparty token authentication via partypass instead)
 
-The session after `party.auth()` looks something like this:
+The session after `party.auth(name)` looks something like this:
 
 ```
 session := {
-  "*": <access_token>
+  <name>: {
+    access_token: <access_token>
+  }
 }
+```
+
+test expected results:
+
+client
+
+```
+[Expected] { success: true } == { success: true }
+[Expected] { success: true } == { success: true }
+```
+
+server
+
+```
+session {}
+session { user: { access_token: '12345' } }
 ```

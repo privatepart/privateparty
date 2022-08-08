@@ -10,15 +10,11 @@ const web3 = createAlchemyWeb3(process.env.RPC)
 const party = new Privateparty()
 party.add("user", {
   authorize: async (req, account) => {
-    const contract_address = "0xf7d134224a66c6a4ddeb7dee714a280b99044805"
-    const allow_list = [ "0xFb7b2717F7a2a30B42e21CEf03Dd0fC76Ef761E9", "0x502b2FE7Cc3488fcfF2E16158615AF87b4Ab5C41" ].map(l => l.toLowerCase())
-    const balance = await party.contract(web3, party.abi.erc721, contract_address).balanceOf(account).call()
-    const ismember = allow_list.includes(account)
-    if (balance > 0 || ismember) {
-      return { sartoshi: balance, ismember }
-    } else {
-      // If the balance is 0, don't allow login
-      throw new Error("must own both 'end of sartoshi' OR is a member")
+    const UNI = "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984"
+    const RARI = "0xfca59cd816ab1ead66534d82bc21e7515ce441cf"
+    let balance = await party.contract(web3, party.abi.erc20, RARI).balanceOf(account).call()
+    return {
+      balance: balance
     }
   }
 })

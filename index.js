@@ -238,50 +238,58 @@ class Privateparty {
   contract(web3, abi, address) {
     return new web3.eth.Contract(abi, address).methods
   }
+
+  // check what roles the request is authorized to access a role "name"
+  //
+  // returns: a session object:
+  // if access token => { access_token: <token> }
+  // if jwt => the parsed JWT (the "aud" of the parsed JWT must match the "name")
+  // if cookie => the parsed JWT (the "aud" must match the "name" + the current request cookie must contain the "name")
+  // if no match => req.session is {} and returns {}
   async check(req, name) {
     // If the request contains an "authorization" header, it's a token authenticated request
+    if (!req.session) req.session = {}
     if (req.headers && req.headers['authorization']) {
       let a = req.headers['authorization']
       let s = a.split(' ')
       let token = s[1]
       let engine = this.engines[name]
-      if (engine.tokens && engine.tokens.includes(token)) {
+      if (engine && engine.tokens && engine.tokens.includes(token)) {
+        let access_token = token
         // hardcoded access token authentication
-        req.session = {
-          [name]: { token }
-        }
+        req.session[name] = { access_token }
+        req.authtype = "token:access"
       } else {
+        let jwt = token
         // jwt token authentication
-        let extracted = await this.verify(token)
-        if (extracted) {
-          req.session = {
-            [name]: extracted
-          }
+        let extracted = await this.verify(jwt)
+        if (extracted && extracted.aud === name) {
+          // the audience in JWT matches the name
+          req.session[name] = extracted
+          req.authtype = "token:jwt"
         } else {
-          req.session = null
+          // the audience does not match the name (The JWT is for a different role) => do nothing
         }
       }
-      req.authtype = "token"
     }
     // If the request contains cookies, it's an in-browser request.
     else if (req.cookies) {
-      req.session = {}
-      for(let key in req.cookies) {
-        if (key !== "_csrf") {
-          req.session[key] = await this.verify(req.cookies[key])
+      if (req.cookies && req.cookies[name]) {
+        let jwt = req.cookies[name]
+        let extracted = await this.verify(jwt)
+        if (extracted && extracted.aud === name) {
+          req.session[name] = extracted
+          req.authtype = "cookie:jwt"
         }
       }
-      req.authtype = "cookie"
-    }
-    // Otherwise, null session
-    else {
-      req.session = null
     }
     return req.session
   }
-  error(res, name, handler) {
+  error(req, res, name, handler) {
     if (handler) {
-      if (handler.redirect) {
+      if (typeof handler === 'function') {
+        handler(req, res)
+      } else if (handler.redirect) {
         res.redirect(handler.redirect)
       } else if (handler.render) {
         res.status(401).set('Content-Type', 'text/html').sendFile(handler.render)
@@ -295,45 +303,48 @@ class Privateparty {
     }
   }
   auth (name) {
-    return async (req, res, next) => {
-      if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
-        next()
-      } else {
-        await this.check(req, name)
+    if (name) {
+      return async (req, res, next) => {
+        let names = (Array.isArray(name) ? name : [name])
+        for(let name of names) {
+          if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
+            next()
+            return
+          } else {
+            await this.check(req, name)
+          }
+        }
         next()
       }
+    } else {
+      throw new Error("missing parameter 'name' in auth(name)")
     }
   }
 
-  // advanced protection (both access token protect + cookie protection)
-  protect2 (mapping, handler) {
+  protect2 (names, handler) {
     return async (req, res, next) => {
-      // cookie authentication setup route => always pass
-      if (mapping.cookie && req.originalUrl === this.engines[mapping.cookie].connect || req.originalUrl === this.engines[mapping.cookie].disconnect) {
-        next()
-      } else {
-        // loop through the roles and check until matches
-        for(let key in mapping) {
-          // key := "token"|"cookie"
-          let session = await this.check(req, mapping[key])
-          if (session) break;
-        }
-        if (req.session && Object.keys(req.session).length > 0) {
-          // at least one of the sessions is available
+      // must match at least one
+      // call next() when at least one match happens
+      for(let name of names) {
+        if (this.engines[name] && (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect)) {
           next()
+          return
         } else {
-          // if the request was token authenticated, return json
-          // if the request was cookie authenticated, return html
-          this.error(res, mapping[req.authtype], handler)
+          await this.check(req, name)
         }
+      }
+      if (req.session && Object.keys(req.session).length > 0) {
+        next()
+      } else {
+        // if none of them passed, trigger error
+        this.error(req, res, names, handler)
       }
     }
   }
-
   // cookie protection
   protect1 (name, handler) {
     return async (req, res, next) => {
-      if (req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
+      if (this.engines[name] && req.originalUrl === this.engines[name].connect || req.originalUrl === this.engines[name].disconnect) {
         next()
       } else {
         await this.check(req, name)
@@ -342,20 +353,27 @@ class Privateparty {
           next()
         } else {
           //// logged out 
-          this.error(res, name, handler)
+          this.error(req, res, name, handler)
         }
       }
     }
   }
+
   /*
   protect1: party.protect({ token: "api", cookie: "admin" }, handler)
   protect2: party.protect("api", handler)
   */
   protect (name, handler) {
-    if (typeof name === 'string') {
-      return this.protect1(name, handler)
+    if (name) {
+      if (typeof name === 'string') {
+        return this.protect1(name, handler)
+      } else if (Array.isArray(name)) {
+        return this.protect2(name, handler)
+      } else {
+        throw new Error("'name' in protect(name) must be either a string or an array")
+      }
     } else {
-      return this.protect2(name, handler)
+      throw new Error("missing parameter 'name' in protect(name, handler)")
     }
   }
 }

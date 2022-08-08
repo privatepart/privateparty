@@ -2,9 +2,6 @@ const Privateparty = require('../../index')
 const party = new Privateparty()
 party.add("user")
 party.add("admin", {
-  session: "/admin/session",
-  connect: "/admin/connect",
-  disconnect: "/admin/disconnect",
   authorize: (req, account) => {
     return { admin: true }
   }

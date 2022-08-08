@@ -1,15 +1,16 @@
 <html>
+<head>
+<script src="https://unpkg.com/partyconnect@0.0.41/dist/partyconnect.js"></script>
+</head>
 <body>
 <nav>
-  <a id='account' href="/privateparty/gate/user?callback=/onboarding"></a>
+	<a href="/privateparty/gate/user?callback=/">Logout</a>
   <pre class='session'></pre>
 </nav>
-<script src="https://unpkg.com/partyconnect@0.0.42/dist/partyconnect.js"></script>
 <script>
 const party = new Privateparty()
 const render = async () => {
   let session = await party.session("user")
-  document.querySelector("a").innerHTML = (session ? session.account : "login")
   document.querySelector(".session").innerHTML = JSON.stringify(session, null, 2)
 }
 render()

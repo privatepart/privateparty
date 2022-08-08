@@ -20,7 +20,6 @@ party.add("user", {
     }
   },
   authorize: async (req, account, contracts) => {
-    console.log(contracts)
     // take a snapshot of ERC721 NFT balance (End of Sartoshi)
     // ONLY allow login if the account holds AT LEAST 1
     let sartoshi_balance = await contracts.end_of_sartoshi.methods.balanceOf(account).call()

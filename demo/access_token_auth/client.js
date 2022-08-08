@@ -5,7 +5,7 @@ const fetch = require('cross-fetch');
     let r = await fetch("http://localhost:3000/api").then((r) => {
       return r.json()
     })
-    console.log("[Shouldnt happen] Result", r)
+    console.log("[Expected]", r, "==", { success: true })
   } catch (e) {
     // Should error
     console.log("[Expected] Error",e.message)
@@ -20,7 +20,7 @@ const fetch = require('cross-fetch');
     }).then((r) => {
       return r.json()
     })
-    console.log("[Expected] Result", r)
+    console.log("[Expected]", r, "==", { success: true })
   } catch (e) {
     console.log("[Shouldnt happen] Error",e)
   }
